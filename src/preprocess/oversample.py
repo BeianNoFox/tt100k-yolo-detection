@@ -33,13 +33,13 @@ def oversample_dataset(images_dir: Path, labels_dir: Path, output_dir: Path,
     print(f"[INFO] {num_classes} classes, {len(img_classes)} images")
 
     # 2. 确定每类的复制倍率：
-    #    <10  → 1x (不复制，过拟合风险太高，靠强增强补)
-    #    10-50 → 10x, 50-100→5x, 100-200→3x, >=200→1x
+    #    <5   → 1x (极少数, 复制无意义, 靠强增强)
+    #    5-50 → 10x, 50-100→5x, 100-200→3x, >=200→1x
     class_multiplier = {}
     skipped_ultra = 0
     for cls_id, count in class_counter.items():
-        if count < 10:
-            class_multiplier[cls_id] = 1  # ultra-low: skip oversample
+        if count < 5:
+            class_multiplier[cls_id] = 1  # ultra-low: skip
             skipped_ultra += 1
         elif count < 50:
             class_multiplier[cls_id] = multipliers[2]  # 10x
