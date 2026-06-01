@@ -1,7 +1,7 @@
-experiment: "exp5_refined_oversample"
-description: "Refined threshold: skip <5 only, 5-50 oversampled 10x"
+experiment: "exp5_augmented"
+description: "Heavy augmentation for ultra-low classes (flip+rotate+HSV+scale) instead of brute-force copy"
 model: "yolov8s.pt"
-data: "data/processed/yolo_oversampled_v3/dataset.yaml"
+data: "data/processed/yolo_augmented/dataset.yaml"
 imgsz: 1024
 epochs: 200
 patience: 999
