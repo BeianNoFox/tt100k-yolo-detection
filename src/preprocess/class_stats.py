@@ -7,23 +7,30 @@ from collections import Counter
 
 
 def parse_annotations(anno_path: Path):
-    """读取 TT100K JSON，返回 [(image_name, [objects]), ...]"""
+    """读取 TT100K 2021 JSON，返回 [(image_name, [objects]), ...]
+
+    TT100K 2021 格式:
+      {"types": ["pl80", ...], "imgs": {"62627": {"path": "train/62627.jpg", "objects": [...]}}}
+    """
     with open(anno_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
+    class_names = data.get("types", [])
+    imgs = data.get("imgs", {})
+
     results = []
-    for key, val in data.items():
-        img_name = Path(key).name
-        objects = val.get("objects", val) if isinstance(val, dict) else val
-        if isinstance(objects, dict):
-            objects = objects.get("objects", [])
-        results.append((img_name, objects))
+    for img_id, img_info in imgs.items():
+        img_path = img_info.get("path", f"{img_id}.jpg")
+        objects = img_info.get("objects", [])
+        results.append((img_path, objects))
 
-    print(f"[INFO] {len(results)} images loaded, total objects: {sum(len(objs) for _, objs in results)}")
-    return results
+    total_objs = sum(len(objs) for _, objs in results)
+    print(f"[INFO] {len(class_names)} class names in 'types'")
+    print(f"[INFO] {len(results)} images loaded, total objects: {total_objs}")
+    return results, class_names
 
 
-def compute_stats(annotations: list, output_dir: Path):
+def compute_stats(annotations: list, output_dir: Path, class_names: list = None):
     """计算类别实例数分布和 bbox 尺寸分布"""
     class_counter = Counter()
     size_bins = {"small": 0, "medium": 0, "large": 0}
@@ -92,6 +99,14 @@ Bbox size distribution (in original 2048px):
     summary_path.write_text(summary, encoding="utf-8")
     print(f"[INFO] Summary written to {summary_path}")
 
+    # 额外：检查 types 中有多少类别实际出现在标注中
+    present = set(c for c, _ in rows if c != "unknown")
+    missing = set(class_names) - present
+    if missing:
+        print(f"[INFO] {len(missing)} classes in 'types' have zero instances in annotations")
+
+    return class_counter
+
 
 def main():
     parser = argparse.ArgumentParser(description="TT100K class distribution stats")
@@ -99,8 +114,8 @@ def main():
     parser.add_argument("--out", default="data/processed/stats", help="Output directory")
     args = parser.parse_args()
 
-    annotations = parse_annotations(Path(args.anno))
-    compute_stats(annotations, Path(args.out))
+    annotations, class_names = parse_annotations(Path(args.anno))
+    compute_stats(annotations, Path(args.out), class_names)
 
 
 if __name__ == "__main__":
