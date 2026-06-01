@@ -4,13 +4,13 @@ model: "yolov8s.pt"
 data: "data/processed/yolo_tiled/dataset.yaml"
 imgsz: 640
 epochs: 300
-patience: 80
-batch: 16
+patience: 15
+batch: 128
 lr0: 0.0005
 optimizer: "AdamW"
 pretrained: true
 device: "cuda:0"
-workers: 4
+workers: 16
 tiling:
   enabled: true
   tile_size: 640
