@@ -1,7 +1,6 @@
 """Ultralytics YOLOv8 自定义回调：追踪每 epoch per-class AP"""
 import csv
 from pathlib import Path
-from ultralytics.utils.torch_utils import de_parallel
 
 
 class PerClassAPCallback:
