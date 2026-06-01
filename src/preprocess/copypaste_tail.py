@@ -107,8 +107,17 @@ def copypaste_augment(images_dir: Path, labels_dir: Path, output_dir: Path,
             px = random.randint(0, max_x)
             py = random.randint(0, max_y)
 
-            # 贴上去
-            bg_img[py:py + new_h, px:px + new_w] = crop_resized
+            # Alpha 混合贴入（边缘自然）
+            alpha = random.uniform(0.8, 0.95)  # 标志半透明
+            roi = bg_img[py:py + new_h, px:px + new_w]
+            blended = cv2.addWeighted(crop_resized, alpha, roi, 1 - alpha, 0)
+            # 边缘羽化
+            mask = np.zeros((new_h, new_w), dtype=np.float32)
+            border = min(3, new_w // 4, new_h // 4)
+            cv2.rectangle(mask, (border, border), (new_w - border, new_h - border), 1.0, -1)
+            mask = cv2.GaussianBlur(mask, (border * 2 + 1, border * 2 + 1), 0)
+            mask = mask[:, :, np.newaxis]
+            bg_img[py:py + new_h, px:px + new_w] = (blended * mask + roi * (1 - mask)).astype(np.uint8)
 
             # 保存新图
             new_stem = f"{bg_stem}_cp{cls_id}_{paste_idx}"
