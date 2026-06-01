@@ -64,7 +64,7 @@ def run_experiment(config_path: Path, experiments_root: Path):
         "pretrained": cfg.get("pretrained", True),
         "device": cfg.get("device", "cuda:0"),
         "workers": cfg.get("workers", 4),
-        "project": str(exp_dir),
+        "project": str(exp_dir.resolve()),  # 绝对路径, 防止 Ultralytics 加前缀 runs/detect/
         "name": "run",
         "exist_ok": True,
         "save": True,

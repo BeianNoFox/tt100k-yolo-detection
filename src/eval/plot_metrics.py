@@ -126,6 +126,9 @@ def plot_per_class_ap(class_ap_csv: Path, output_dir: Path):
         print(f"[WARN] {class_ap_csv} not found")
         return
     df = pd.read_csv(class_ap_csv)
+    if len(df) == 0:
+        print(f"[WARN] {class_ap_csv} is empty, skipping")
+        return
     last_row = df.iloc[-1]
     ap_cols = [c for c in df.columns if c.startswith("AP_")]
     ap_values = [last_row[c] for c in ap_cols]
