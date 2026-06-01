@@ -1,6 +1,42 @@
-"""Ultralytics YOLOv8 回调：每 epoch 写入 per-class AP"""
+"""自定义早停 + Per-class AP 回调"""
 import csv
 from pathlib import Path
+
+
+class RobustEarlyStopping:
+    def __init__(self, patience=8, min_delta=0.001):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.best_map = -1.0
+        self.counter = 0
+
+    def __call__(self, trainer):
+        epoch = getattr(trainer, "epoch", 0)
+        try:
+            box = getattr(trainer.metrics, "box", None) if hasattr(trainer, "metrics") else None
+            if box is None:
+                return
+            cur = float(box.map50) if box.map50 is not None else -1
+        except Exception:
+            return
+        if cur < 0:
+            return
+
+        improvement = cur - self.best_map
+        if improvement > self.min_delta:
+            self.best_map = cur
+            self.counter = 0
+            print(f"[EarlyStop] Epoch {epoch}: mAP improved → {cur:.4f} (+{improvement:.4f})")
+        else:
+            self.counter += 1
+            print(f"[EarlyStop] Epoch {epoch}: mAP={cur:.4f} (Δ={improvement:.4f}), stale {self.counter}/{self.patience}")
+
+        if self.counter >= self.patience:
+            print(f"[EarlyStop] Auto-stopping at epoch {epoch}")
+            trainer.model.ema = None  # trigger stop
+            if hasattr(trainer, "stopper"):
+                trainer.stopper.stop = True
+            trainer.stop_training = True
 
 
 class PerClassAPCallback:
@@ -19,82 +55,33 @@ class PerClassAPCallback:
         if epoch in self._done:
             return
         self._done.add(epoch)
-
         try:
-            # 方式 A: 直接读取 trainer.metrics (Ultralytics 8.4 在 val 后设置)
-            metrics = getattr(trainer, "metrics", None)
-            if metrics is None:
-                return
-            box = getattr(metrics, "box", None)
+            box = getattr(trainer.metrics, "box", None) if hasattr(trainer, "metrics") else None
             if box is None:
                 return
-
             ap_idx = getattr(box, "ap_class_index", None)
             ap50 = getattr(box, "ap50", None)
-
             if ap_idx is None or ap50 is None or len(ap_idx) == 0:
                 return
-
             per_class = {}
-            idx_list = ap_idx.cpu().tolist() if hasattr(ap_idx, "cpu") else list(ap_idx)
-            ap_list = ap50.cpu().tolist() if hasattr(ap50, "cpu") else list(ap50)
-            for idx, ap in zip(idx_list, ap_list):
+            for idx, ap in zip(ap_idx.cpu().tolist(), ap50.cpu().tolist()):
                 per_class[idx] = ap
-
-            map50 = float(box.map50) if getattr(box, "map50", None) is not None else 0.0
-            map_val = float(box.map) if getattr(box, "map", None) is not None else 0.0
-
+            map50 = float(box.map50) if box.map50 is not None else 0.0
+            map_val = float(box.map) if box.map is not None else 0.0
             row = [epoch]
             for i in range(len(self.class_names)):
                 row.append(round(per_class.get(i, 0.0), 4))
             row.append(round(map50, 6))
             row.append(round(map_val, 6))
-
             with open(self.csv_path, "a", newline="") as f:
                 csv.writer(f).writerow(row)
-
             print(f"[Callback] Epoch {epoch}: {len(per_class)} classes, mAP50={map50:.4f}")
-
         except Exception as e:
-            # 方式 B: 从 trainer.validator 拿
-            try:
-                validator = getattr(trainer, "validator", None)
-                if validator is None:
-                    return
-                metrics = getattr(validator, "metrics", None)
-                if metrics is None:
-                    return
-                box = getattr(metrics, "box", None)
-                if box is None:
-                    return
-
-                ap_idx = getattr(box, "ap_class_index", None)
-                ap50 = getattr(box, "ap50", None)
-                if ap_idx is None or ap50 is None or len(ap_idx) == 0:
-                    return
-
-                per_class = {}
-                idx_list = ap_idx.cpu().tolist() if hasattr(ap_idx, "cpu") else list(ap_idx)
-                ap_list = ap50.cpu().tolist() if hasattr(ap50, "cpu") else list(ap50)
-                for idx, ap in zip(idx_list, ap_list):
-                    per_class[idx] = ap
-
-                map50 = float(box.map50) if getattr(box, "map50", None) is not None else 0.0
-                map_val = float(box.map) if getattr(box, "map", None) is not None else 0.0
-
-                row = [epoch]
-                for i in range(len(self.class_names)):
-                    row.append(round(per_class.get(i, 0.0), 4))
-                row.append(round(map50, 6))
-                row.append(round(map_val, 6))
-
-                with open(self.csv_path, "a", newline="") as f:
-                    csv.writer(f).writerow(row)
-
-                print(f"[Callback] Epoch {epoch}: {len(per_class)} classes, mAP50={map50:.4f} (via validator)")
-            except Exception as e2:
-                print(f"[Callback] Epoch {epoch}: API access failed — {e2}")
+            print(f"[Callback] Epoch {epoch}: {e}")
 
 
 def make_callbacks(experiment_dir: Path, class_names: list):
-    return [PerClassAPCallback(output_dir=experiment_dir, class_names=class_names)]
+    return [
+        RobustEarlyStopping(patience=8, min_delta=0.001),
+        PerClassAPCallback(output_dir=experiment_dir, class_names=class_names),
+    ]
