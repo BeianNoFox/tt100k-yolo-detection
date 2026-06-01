@@ -1,10 +1,10 @@
 """自定义早停 + Per-class AP 回调"""
 import csv
 from pathlib import Path
+from collections import deque
 
 
 def _to_list(obj):
-    """兼容 torch tensor / numpy / list"""
     if hasattr(obj, "cpu"):
         return obj.cpu().tolist()
     if hasattr(obj, "tolist"):
@@ -13,10 +13,18 @@ def _to_list(obj):
 
 
 class RobustEarlyStopping:
-    def __init__(self, patience=8, min_delta=0.005):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_map = -1.0
+    """
+    基于移动均线的早停：
+    - 每轮记录 mAP，取最近 `window` 轮的中位数/均值
+    - 若近期均值不再高于已记录的峰值（margin > min_delta），计数 +1
+    - 连续 patience 轮无实质提升 → 自动停止
+    """
+    def __init__(self, patience=5, min_delta=0.005, window=5):
+        self.patience = patience          # 停滞 patience 轮后停
+        self.min_delta = min_delta        # 提升阈值（~0.5 mAP 点）
+        self.window = window              # 平滑窗口
+        self.history = deque(maxlen=window)
+        self.peak = -1.0                  # 已确认的最高 mAP
         self.counter = 0
         self._started = False
 
@@ -29,27 +37,29 @@ class RobustEarlyStopping:
             cur = float(box.map50) if box.map50 is not None else -1
         except Exception:
             return
-        if cur < 0.01:  # 不合理值跳过
+        if cur < 0.01:
             return
 
-        # 首次调用：设基准
+        self.history.append(cur)
+        smoothed = sum(self.history) / len(self.history)  # 窗口均值
+
         if not self._started:
-            self.best_map = cur
+            self.peak = smoothed
             self._started = True
-            print(f"[EarlyStop] Epoch {epoch}: baseline mAP={cur:.4f}")
+            print(f"[EarlyStop] Epoch {epoch}: baseline smoothed mAP={smoothed:.4f}")
             return
 
-        improvement = cur - self.best_map
-        if improvement > self.min_delta:
-            self.best_map = cur
+        if smoothed > self.peak + self.min_delta:
+            self.peak = smoothed
             self.counter = 0
-            print(f"[EarlyStop] Epoch {epoch}: mAP improved → {cur:.4f} (+{improvement:.4f})")
+            print(f"[EarlyStop] Epoch {epoch}: smoothed mAP ↑ {smoothed:.4f} (peak={self.peak:.4f})")
         else:
             self.counter += 1
-            print(f"[EarlyStop] Epoch {epoch}: mAP={cur:.4f} (Δ={improvement:.4f}), stale {self.counter}/{self.patience}")
+            direction = "↑" if smoothed > self.peak else "↓"
+            print(f"[EarlyStop] Epoch {epoch}: smoothed mAP={smoothed:.4f} {direction}, plateau {self.counter}/{self.patience}")
 
         if self.counter >= self.patience:
-            print(f"[EarlyStop] Auto-stopping at epoch {epoch}")
+            print(f"[EarlyStop] Stopping — no meaningful improvement for {self.patience} epochs")
             if hasattr(trainer, "stopper"):
                 trainer.stopper.stop = True
             trainer.stop_training = True
@@ -96,6 +106,6 @@ class PerClassAPCallback:
 
 def make_callbacks(experiment_dir: Path, class_names: list):
     return [
-        RobustEarlyStopping(patience=8, min_delta=0.005),
+        RobustEarlyStopping(patience=5, min_delta=0.005, window=5),
         PerClassAPCallback(output_dir=experiment_dir, class_names=class_names),
     ]
