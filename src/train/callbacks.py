@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 class RobustEarlyStopping:
-    def __init__(self, patience=8, min_delta=0.001):
+    def __init__(self, patience=8, min_delta=0.005):
         self.patience = patience
         self.min_delta = min_delta
         self.best_map = -1.0
