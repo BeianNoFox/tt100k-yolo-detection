@@ -76,17 +76,21 @@ def plot_map_curve(exp_name: str, df: pd.DataFrame, output_dir: Path):
 
 def plot_multi_exp_loss_compare(dfs: dict, output_dir: Path):
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    # 取所有实验的中位 epoch 数作为 X 轴上限
+    max_epochs = min(max(len(df) for df in dfs.values()), 50)
     for metric, ax, title in [("val/box_loss", axes[0], "Val Box Loss"),
                                ("val/cls_loss", axes[1], "Val Cls Loss")]:
         for i, (exp_name, df) in enumerate(dfs.items()):
             if metric in df.columns:
-                ax.plot(df.index, df[metric], label=exp_name, color=COLORS[i % len(COLORS)], linewidth=1.5)
+                subset = df.iloc[:max_epochs]
+                ax.plot(range(len(subset)), df[metric].iloc[:max_epochs],
+                        label=exp_name, color=COLORS[i % len(COLORS)], linewidth=1.5)
         ax.set_title(title)
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Loss")
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
-    fig.suptitle("Multi-Experiment Loss Comparison")
+    fig.suptitle("Multi-Experiment Loss Comparison (first 50 epochs)")
     fig.tight_layout()
     output_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_dir / "multi_exp_loss_compare.png")
