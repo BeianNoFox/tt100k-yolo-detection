@@ -35,8 +35,22 @@ def augment_image(img: np.ndarray, seed: int) -> np.ndarray:
     beta = random.randint(-20, 20)
     img = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
 
-    # 5. 随机缩放 0.85-1.15
-    scale = random.uniform(0.85, 1.15)
+    # 5. 高斯噪声
+    noise = np.random.normal(0, random.uniform(3, 10), img.shape).astype(np.uint8)
+    img = cv2.add(img, noise)
+
+    # 6. 透视变换（轻微）
+    pts1 = np.float32([[0, 0], [w, 0], [0, h], [w, h]])
+    jitter = w * 0.05
+    pts2 = np.float32([[random.uniform(0, jitter), random.uniform(0, jitter)],
+                        [w - random.uniform(0, jitter), random.uniform(0, jitter)],
+                        [random.uniform(0, jitter), h - random.uniform(0, jitter)],
+                        [w - random.uniform(0, jitter), h - random.uniform(0, jitter)]])
+    M_p = cv2.getPerspectiveTransform(pts1, pts2)
+    img = cv2.warpPerspective(img, M_p, (w, h), borderMode=cv2.BORDER_REFLECT)
+
+    # 7. 随机缩放 0.75-1.25
+    scale = random.uniform(0.75, 1.25)
     new_w, new_h = int(w * scale), int(h * scale)
     img = cv2.resize(img, (new_w, new_h))
     if scale > 1.0:
@@ -132,7 +146,7 @@ def oversample_with_augment(images_dir: Path, labels_dir: Path, output_dir: Path
 
         # 如果图里有极低频类，额外生成增强版本
         if has_ultra and max_mult == 1:
-            for aug_idx in range(5):  # 每张极低频图生成 5 个增强版本
+            for aug_idx in range(15):  # 每张极低频图生成 15 个增强版本
                 augmented = augment_image(original, seed=hash(f"{stem}_{aug_idx}"))
                 aug_stem = f"{stem}_aug{aug_idx}"
                 cv2.imwrite(str(output_img / f"{aug_stem}.jpg"), augmented, [cv2.IMWRITE_JPEG_QUALITY, 95])
