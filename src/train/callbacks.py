@@ -1,7 +1,6 @@
 """Ultralytics YOLOv8 自定义回调：追踪每 epoch per-class AP"""
 import csv
 from pathlib import Path
-import numpy as np
 
 
 class PerClassAPCallback:
@@ -24,24 +23,36 @@ class PerClassAPCallback:
             if metrics is None:
                 return
 
-            maps = getattr(metrics, "maps", None)
-            ap_idx = getattr(metrics, "ap_class_index", None)
-
-            if maps is None or ap_idx is None or len(ap_idx) == 0:
-                print(f"[Callback] Epoch {epoch}: no per-class data")
+            # Ultralytics 8.4: DetMetrics.box = Metric 对象
+            box = getattr(metrics, "box", None)
+            if box is None:
                 return
+
+            ap_idx = getattr(box, "ap_class_index", None)
+            ap50 = getattr(box, "ap50", None)
+
+            if ap_idx is None or ap50 is None:
+                return
+            if len(ap_idx) == 0:
+                return
+
+            # ap_idx: tensor of class indices, ap50: tensor of AP values
+            ap_dict = {}
+            for idx, ap in zip(ap_idx.cpu().tolist(), ap50.cpu().tolist()):
+                ap_dict[idx] = ap
+
+            map50 = float(box.map50) if getattr(box, "map50", None) is not None else 0.0
+            map_val = float(box.map) if getattr(box, "map", None) is not None else 0.0
 
             row = [epoch]
             for i in range(len(self.class_names)):
-                matched = [j for j, idx in enumerate(ap_idx) if idx == i]
-                row.append(round(float(maps[matched[0]][0]), 4) if matched else 0.0)
-
-            rd = metrics.results_dict
-            row.append(round(rd.get("metrics/mAP50(B)", 0.0), 6))
-            row.append(round(rd.get("metrics/mAP50-95(B)", 0.0), 6))
+                row.append(round(ap_dict.get(i, 0.0), 4))
+            row.append(round(map50, 6))
+            row.append(round(map_val, 6))
 
             with open(self.csv_path, "a", newline="") as f:
                 csv.writer(f).writerow(row)
+
         except Exception as e:
             print(f"[Callback] Epoch {epoch}: {e}")
 
