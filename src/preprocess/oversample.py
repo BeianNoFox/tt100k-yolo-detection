@@ -32,10 +32,16 @@ def oversample_dataset(images_dir: Path, labels_dir: Path, output_dir: Path,
     num_classes = len(class_counter)
     print(f"[INFO] {num_classes} classes, {len(img_classes)} images")
 
-    # 2. 确定每类的复制倍率：<50→10x, 50-100→5x, 100-200→3x, >=200→1x
+    # 2. 确定每类的复制倍率：
+    #    <10  → 1x (不复制，过拟合风险太高，靠强增强补)
+    #    10-50 → 10x, 50-100→5x, 100-200→3x, >=200→1x
     class_multiplier = {}
+    skipped_ultra = 0
     for cls_id, count in class_counter.items():
-        if count < 50:
+        if count < 10:
+            class_multiplier[cls_id] = 1  # ultra-low: skip oversample
+            skipped_ultra += 1
+        elif count < 50:
             class_multiplier[cls_id] = multipliers[2]  # 10x
         elif count < 100:
             class_multiplier[cls_id] = multipliers[1]  # 5x
@@ -43,6 +49,8 @@ def oversample_dataset(images_dir: Path, labels_dir: Path, output_dir: Path,
             class_multiplier[cls_id] = multipliers[0]  # 3x
         else:
             class_multiplier[cls_id] = 1  # no oversample
+    if skipped_ultra:
+        print(f"[INFO] {skipped_ultra} ultra-low classes (<10 instances) skipped oversample (use mosaic/mixup instead)")
 
     # 3. 对每张图，取图中最稀有的类的倍率作为该图的倍率
     total_src = 0
