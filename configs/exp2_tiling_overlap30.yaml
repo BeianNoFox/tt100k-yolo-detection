@@ -1,0 +1,30 @@
+experiment: "exp2_tiling_o30"
+description: "Tiling 640x640, overlap=30%"
+model: "yolov8s.pt"
+data: "data/processed/yolo_tiled/dataset.yaml"
+imgsz: 640
+epochs: 200
+patience: 50
+batch: 16
+lr0: 0.001
+optimizer: "AdamW"
+pretrained: true
+device: "cuda:0"
+workers: 4
+tiling:
+  enabled: true
+  tile_size: 640
+  overlap: 0.3
+augment:
+  mosaic: 0.0
+  mixup: 0.0
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  flipud: 0.0
+  fliplr: 0.5
+long_tail:
+  oversample: false
+  oversample_threshold: 200
+  oversample_multiplier: [3, 5, 10]
+  class_weight_loss: false
