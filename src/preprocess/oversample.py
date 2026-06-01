@@ -93,9 +93,10 @@ def oversample_dataset(images_dir: Path, labels_dir: Path, output_dir: Path,
         print(f"  class {cls_id:3}: {old:>5} → {new:>5} (+{delta})")
 
     # 4. 复制 val 和 test（不增强）
+    yolo_root = labels_dir.parent  # data/processed/yolo
     for split in ["val", "test"]:
-        src_img_dir = images_dir.parent / "images" / split
-        src_lbl_dir = labels_dir.parent / "labels" / split
+        src_img_dir = yolo_root / "images" / split
+        src_lbl_dir = yolo_root / "labels" / split
         if not src_img_dir.exists():
             continue
         dst_img = output_dir / "images" / split
@@ -109,7 +110,7 @@ def oversample_dataset(images_dir: Path, labels_dir: Path, output_dir: Path,
         print(f"[INFO] Copied {split}: {sum(1 for _ in src_img_dir.iterdir())} images")
 
     # 5. 生成 dataset.yaml
-    src_yaml = labels_dir.parent / "dataset.yaml"
+    src_yaml = yolo_root / "dataset.yaml"
     if src_yaml.exists():
         with open(src_yaml) as f:
             ds_cfg = yaml.safe_load(f)
