@@ -107,7 +107,12 @@ def run_experiment(config_path: Path, experiments_root: Path):
         if args_yaml.exists():
             shutil.copy2(args_yaml, exp_dir / "args.yaml")
 
+    # 自动生成实验报告
+    from src.eval.report import generate_report
+    report_path = generate_report(exp_dir)
+
     print(f"\n[OK] '{exp_name}' complete → {exp_dir}")
+    print(f"[OK] Report → {report_path}")
     return results
 
 
