@@ -93,7 +93,7 @@ def oversample_dataset(images_dir: Path, labels_dir: Path, output_dir: Path,
         print(f"  class {cls_id:3}: {old:>5} → {new:>5} (+{delta})")
 
     # 4. 复制 val 和 test（不增强）
-    yolo_root = labels_dir.parent  # data/processed/yolo
+    yolo_root = labels_dir.parent.parent  # data/processed/yolo (labels_dir = .../labels/train)
     for split in ["val", "test"]:
         src_img_dir = yolo_root / "images" / split
         src_lbl_dir = yolo_root / "labels" / split
