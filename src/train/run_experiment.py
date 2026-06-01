@@ -49,8 +49,9 @@ def run_experiment(config_path: Path, experiments_root: Path):
     if lt.get("class_weight_loss"):
         print("[INFO] Class weights applied via oversample multiplier tiers")
 
-    # 注册回调
-    callbacks = make_callbacks(exp_dir, class_names)
+    # 注册回调到模型上
+    for cb in make_callbacks(exp_dir, class_names):
+        model.add_callback("on_val_end", cb)
 
     # 构建训练参数
     train_args = {
