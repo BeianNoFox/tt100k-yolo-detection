@@ -2,21 +2,21 @@ experiment: "exp1_baseline"
 description: "Baseline: YOLOv8s, no tiling, no long-tail handling"
 model: "yolov8s.pt"
 data: "data/processed/yolo/dataset.yaml"
-imgsz: 640
+imgsz: 1024
 epochs: 200
-patience: 10
-batch: 128
+patience: 5
+batch: 32
 lr0: 0.001
 optimizer: "AdamW"
 pretrained: true
 device: "cuda:0"
-workers: 16
+workers: 12
 tiling:
   enabled: false
   tile_size: 640
   overlap: 0.0
 augment:
-  mosaic: 0.0
+  mosaic: 0.3
   mixup: 0.0
   hsv_h: 0.015
   hsv_s: 0.7

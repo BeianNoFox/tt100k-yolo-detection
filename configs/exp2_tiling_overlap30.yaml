@@ -2,21 +2,21 @@ experiment: "exp2_tiling_o30"
 description: "Tiling 640x640, overlap=30%"
 model: "yolov8s.pt"
 data: "data/processed/yolo_tiled/dataset.yaml"
-imgsz: 640
+imgsz: 1024
 epochs: 200
-patience: 10
-batch: 128
+patience: 5
+batch: 32
 lr0: 0.001
 optimizer: "AdamW"
 pretrained: true
 device: "cuda:0"
-workers: 16
+workers: 12
 tiling:
   enabled: true
   tile_size: 640
   overlap: 0.3
 augment:
-  mosaic: 0.0
+  mosaic: 0.3
   mixup: 0.0
   hsv_h: 0.015
   hsv_s: 0.7
