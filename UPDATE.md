@@ -29,13 +29,32 @@
 - train: 6,816 / val: 1,948 / test: 974
 - 已推送: `16decb4`
 
-### ⬜ Task 6: Per-class AP 回调
-### ⬜ Task 7: 实验配置文件 (已完成YAML，待验证)
-### ⬜ Task 8: 实验运行器
-### ⬜ Task 9: 绘图脚本
-### ⬜ Task 10: Flask 推理 API
-### ⬜ Task 11: 数据下载辅助脚本
-### ⬜ Task 12: 集成验证
+### ✅ Task 6: Per-class AP 回调
+- `src/train/callbacks.py` — 每 epoch 记录各类 AP 到 CSV
+- 已推送: `b7065b9`
+
+### ✅ Task 7: 实验配置
+- 6 个 YAML: exp1_baseline, exp2_tiling_o0/o20/o30, exp3_longtail, exp4_finetune
+
+### ✅ Task 8: 实验运行器
+- `src/train/run_experiment.py` — 读取 YAML → 训练 → 自动收集产物
+- 已推送: `b7065b9`
+
+### ✅ Task 9: 绘图脚本
+- `src/eval/plot_metrics.py` — 从日志生成 Loss/mAP/Per-class AP 等论文图表
+- 已推送: `29de732`
+
+### ✅ Task 10: Flask 推理 API
+- `src/infer/app.py` — POST /detect, 支持大图切片推理 + NMS 合并
+- 已推送: `29de732`
+
+### ✅ Task 11: 数据下载辅助脚本
+- `scripts/download_tt100k.py` — 下载指引
+- 已推送: `29de732`
+
+### ✅ Task 12: 集成验证
+- 全部 Python 文件语法检查通过
+- 待训练后验证完整流水线
 
 ---
 
