@@ -10,3 +10,4 @@ experiments/*/
 .env
 venv/
 .venv/
+temp/

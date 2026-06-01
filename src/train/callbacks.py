@@ -48,13 +48,8 @@ class PerClassAPCallback:
         header = ["epoch"] + [f"AP_{name}" for name in class_names] + ["mAP50", "mAP50_95"]
         with open(self.csv_path, "w", newline="") as f:
             csv.writer(f).writerow(header)
-        self._done = set()
-
     def __call__(self, trainer):
-        epoch = getattr(trainer, "epoch", -1)
-        if epoch in self._done:
-            return
-        self._done.add(epoch)
+        epoch = getattr(trainer, "epoch", 0)
         try:
             box = getattr(trainer.metrics, "box", None) if hasattr(trainer, "metrics") else None
             if box is None:

@@ -54,7 +54,32 @@
 
 ### ✅ Task 12: 集成验证
 - 全部 Python 文件语法检查通过
-- 待训练后验证完整流水线
+
+---
+
+## 实验记录
+
+### Exp 1 — 基线 (imgsz=1024)
+- 配置: YOLOv8s, 1024×1024, batch=32, patience=5
+- 结果: mAP@0.5=0.886 (epoch 74), mAP@0.5:0.95=0.689
+- 尾部类: w32=0.512, ph4=0.614
+- 下载: `experiments/exp1_baseline/`
+
+### Exp 3 — 长尾处理 (1024 + 加倍采样)
+- 配置: 同 Exp1 + oversample (10969 图, +164%) + mosaic=0.5 + mixup=0.3
+- 结果: mAP@0.5=0.891 (epoch 26 peak), mAP@0.5:0.95=0.691
+- 尾部类变化: wo(+0.11), w13(+0.08), ph4(-0.09), w32(+0.005)
+- 产出: oversample 脚本 → `data/processed/yolo_oversampled/`
+- 下载: `experiments/exp3_longtail/`
+
+### 🔧 修复记录
+- callback epoch=-1 只写一次 → 移除 _done 守卫
+- 内置早停 reset 阈值太小 → 自定义 RobustEarlyStopping(min_delta=0.005)
+- oversample val 路径错误 → 修正 yolo_root=labels_dir.parent.parent
+
+### 下一步
+- ph4 退步根因分析（混淆矩阵 → 类间相似度）
+- Exp 4 最终调参
 
 ---
 
